@@ -24,13 +24,12 @@
   <!-- React & ReactDOM -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <!-- Babel (Untuk menerjemahkan JSX di browser) -->
+  <!-- Babel -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
-  <!-- Firebase (Compat Version untuk HTML murni) -->
+  <!-- Firebase (Compat Version) -->
   <script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.3.1/firebase-auth-compat.js"></script>
 </head>
 <body class="bg-[#faf8f9] font-sans text-[#252027] antialiased selection:bg-[#c99a3b] selection:text-white">
   
@@ -41,32 +40,29 @@
     const { useState, useEffect, useRef } = React;
 
     // =========================================================================
-    // ⚠️ KONFIGURASI DATABASE FIREBASE (WAJIB DIISI AGAR DATA TERSIMPAN)
+    // ⚠️ KONFIGURASI DATABASE FIREBASE (WAJIB DIISI MILIK ANDA SENDIRI)
     // =========================================================================
-    // Hapus tulisan "GANTI_DENGAN_..." dan masukkan kode dari Firebase Console Anda
     const firebaseConfig = {
-      apiKey: "AIzaSyBDcAGi02ZzQ3h9OuBiv6lQ5RSrS0YjgIM",
-  authDomain: "cekdptonlinepilkades.firebaseapp.com",
-  projectId: "cekdptonlinepilkades",
-  storageBucket: "cekdptonlinepilkades.firebasestorage.app",
-  messagingSenderId: "638819297097",
-  appId: "1:638819297097:web:eb9f04a3c172ed09605c98",
-  measurementId: "G-C5C8KCJ7GR"
-};
+      apiKey: "GANTI_DENGAN_API_KEY_ANDA",
+      authDomain: "GANTI_DENGAN_AUTH_DOMAIN_ANDA",
+      projectId: "GANTI_DENGAN_PROJECT_ID_ANDA",
+      storageBucket: "GANTI_DENGAN_STORAGE_BUCKET_ANDA",
+      messagingSenderId: "GANTI_DENGAN_MESSAGING_SENDER_ID_ANDA",
+      appId: "GANTI_DENGAN_APP_ID_ANDA"
+    };
 
-    let app, auth, db;
+    let app, db;
     try {
-      // Mencegah error jika konfigurasi belum diisi
       if(firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("GANTI_DENGAN")) {
          app = firebase.initializeApp(firebaseConfig);
-         auth = firebase.auth();
          db = firebase.firestore();
-         console.log("Firebase Berhasil Terhubung!");
+         console.log("Firebase Berhasil Diinisialisasi!");
       }
     } catch (e) {
       console.error("Firebase init error", e);
     }
-    const appId = 'dpt-air-nyatoh-2026'; // ID Dokumen untuk menyimpan data CSV
+    
+    const appId = 'dpt-air-nyatoh-2026'; // ID Koleksi Dokumen
 
     const maskNik = (nik) => {
       if (!nik || nik.length !== 16) return nik;
@@ -125,49 +121,52 @@
     function App() {
       const [currentView, setCurrentView] = useState('public');
       const [database, setDatabase] = useState([]);
-      const [user, setUser] = useState(null);
-      const [isDbLoading, setIsDbLoading] = useState(false);
+      const [isDbLoading, setIsDbLoading] = useState(true);
 
+      // KONEKSI DAN TARIK DATA DARI FIREBASE SECARA REALTIME
       useEffect(() => {
-        if (!auth) return;
-        auth.signInAnonymously().catch(e => console.error(e));
-        const unsubscribe = auth.onAuthStateChanged(setUser);
-        return () => unsubscribe();
-      }, []);
-
-      useEffect(() => {
-        if (!user || !db) return;
+        if (!db) {
+           setIsDbLoading(false);
+           return;
+        }
+        
         const docRef = db.collection('data_dpt').doc(appId);
+        
         const unsubscribe = docRef.onSnapshot((docSnap) => {
           if (docSnap.exists) {
             try {
               const dataStr = docSnap.data().records;
               if (dataStr) setDatabase(JSON.parse(dataStr));
-            } catch (err) { console.error("Gagal membaca data", err); }
+            } catch (err) { console.error("Gagal parse data", err); }
           }
+          setIsDbLoading(false);
+        }, (error) => {
+           console.error("Error mengambil data:", error);
+           alert("GAGAL MENGHUBUNGI DATABASE!\n\nPastikan Firebase Firestore Anda sudah dibuat (Create Database) dan Aturan (Rules) sudah diatur ke 'true'.");
+           setIsDbLoading(false);
         });
-        return () => unsubscribe();
-      }, [user]);
 
-      // FUNGSI INI AKAN MENYIMPAN DATA KE FIREBASE KETIKA ANDA IMPORT CSV
+        return () => unsubscribe();
+      }, []);
+
+      // FUNGSI UNTUK MENGIRIM DAN MENYIMPAN DATA KE GOOGLE CLOUD
       const saveToCloud = async (newDatabase) => {
-        setDatabase(newDatabase); // Update tampilan secara lokal dulu
+        setDatabase(newDatabase); // Update UI Lokal
         
         if (!db) {
-          alert("PERINGATAN: Konfigurasi Database Firebase belum diisi di kode HTML! Data Anda hanya tersimpan sementara dan akan hilang jika browser ditutup.");
+          alert("PERINGATAN: Anda belum memasukkan Kode Firebase di script HTML! Data hanya tersimpan di memori sementara dan akan HILANG jika halaman di-refresh.");
           return;
         }
         
         try {
-          // Menyimpan array data dalam format JSON string ke dokumen Cloud Firestore
           await db.collection('data_dpt').doc(appId).set({ 
              records: JSON.stringify(newDatabase),
              lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
           });
-          console.log("Data sukses disimpan permanen ke Firebase Cloud!");
+          alert("SUKSES: Data berhasil dikirim dan disimpan permanen di Cloud Firebase!");
         } catch (err) {
-          console.error("Error saat menyimpan:", err);
-          alert("Gagal menyimpan ke Cloud: " + err.message);
+          console.error("Error menyimpan:", err);
+          alert(`GAGAL MENYIMPAN KE CLOUD!\n\nPesan Error: ${err.message}\n\nSolusi: Masuk ke Firebase Console -> Firestore Database -> Buka tab 'Rules' -> Ubah menjadi:\nallow read, write: if true;`);
         }
       };
 
@@ -217,7 +216,6 @@
 
       return (
         <div className="flex flex-col min-h-screen">
-          {/* HEADER */}
           <header className="bg-[#3e0d18] border-b-4 border-[#c99a3b] sticky top-0 z-50 shadow-md print:hidden">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl">
               <div className="flex justify-between items-center h-20">
@@ -256,7 +254,6 @@
                <p className="text-[#6e6267] text-base md:text-lg max-w-2xl mx-auto">Portal resmi pengecekan Data Pemilih Tetap (DPT) Pemilihan Kepala Desa Air Nyatoh Tahun 2026.</p>
             </div>
 
-            {/* DIAGRAM SECTION DENGAN ANIMASI HOVER */}
             <section ref={chartRef} className="py-8 print:hidden">
               <div className="container mx-auto px-4 max-w-4xl">
                  <div className="bg-white rounded-2xl p-6 md:p-8 shadow-md border-2 border-[#eadde0] relative overflow-hidden">
@@ -299,14 +296,12 @@
               </div>
             </section>
 
-            {/* PENCARIAN SECTION */}
             <section ref={cekDptRef} className="py-8 px-4 print:pt-0 print:pb-0">
               <div className="container mx-auto max-w-3xl">
                 <SearchEngine database={database} isDbLoading={isDbLoading} />
               </div>
             </section>
 
-            {/* INFO SECTION */}
             <section ref={infoRef} className="py-16 bg-white border-y border-[#eadde0] print:hidden">
               <div className="container mx-auto px-4 max-w-5xl">
                 <div className="text-center mb-12">
@@ -334,7 +329,6 @@
             </section>
           </main>
 
-          {/* FOOTER */}
           <footer className="bg-[#3e0d18] border-t-4 border-[#c99a3b] text-white py-12 print:hidden">
             <div className="container mx-auto px-4 max-w-5xl text-center">
               <div className="flex justify-center mb-6"><LogoResmi sizeClass="h-16 md:h-20 w-auto" /></div>
@@ -397,12 +391,11 @@
                 </label>
               </div>
               <button type="submit" disabled={status === 'loading'} className="w-full bg-[#5b1525] text-white py-4 rounded-xl font-bold text-lg hover:bg-[#3e0d18] active:scale-[0.99] transition-all shadow-md disabled:opacity-70 flex justify-center items-center gap-2">
-                {status === 'loading' ? "Memeriksa data..." : "CEK DATA PEMILIH"}
+                {status === 'loading' ? "Memeriksa data..." : isDbLoading ? "Menyiapkan Database..." : "CEK DATA PEMILIH"}
               </button>
             </form>
           </div>
 
-          {/* HASIL KETEMU */}
           {status === 'success' && resultData && (
             <div className="w-full max-w-2xl mx-auto print:max-w-none print:w-full print:m-0">
               <div className="bg-white rounded-[18px] shadow-sm border border-[#eadde0] overflow-hidden print:shadow-none print:border-0">
@@ -432,7 +425,6 @@
             </div>
           )}
 
-          {/* HASIL TIDAK KETEMU */}
           {status === 'not-found' && (
             <div className="bg-white rounded-[18px] shadow-sm border border-red-200 text-center p-8">
                 <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6"><AlertCircle size={40} /></div>
@@ -501,9 +493,7 @@
             }
           }
           if (newData.length > 0) { 
-            // Fungsi ini sekarang akan langsung menembak ke Cloud Firebase!
             saveToCloud([...database, ...newData]); 
-            alert(`Berhasil import ${newData.length} data dan disimpan ke sistem!`); 
           }
           fileInputRef.current.value = "";
         };
@@ -512,7 +502,6 @@
 
       const filteredData = database.filter(item => item.nik.includes(searchTerm) || item.nama.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, 50);
 
-      // Hitung Laki & Perempuan secara akurat
       const stats = {
         total: database.length,
         laki: database.filter(d => {
@@ -529,11 +518,9 @@
         return (
           <div className="min-h-screen flex items-center justify-center bg-[#faf8f9]">
             <form onSubmit={handleLogin} className="bg-white p-8 rounded-xl shadow-md border max-w-sm w-full relative">
-              {/* INDIKATOR STATUS CLOUD */}
               <div className="absolute top-4 right-4 flex items-center gap-1.5 text-xs font-bold">
                  {db ? <span className="text-green-600 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> Cloud Aktif</span> : <span className="text-red-500 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500"></div> Cloud Offline</span>}
               </div>
-
               <h2 className="text-2xl font-bold mb-6 text-center mt-2">Login Admin</h2>
               <input type="text" placeholder="Username" value={username} onChange={e=>setUsername(e.target.value)} className="w-full mb-3 p-3 border rounded" />
               <input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full mb-6 p-3 border rounded" />
@@ -551,18 +538,17 @@
               <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2">
                    Dashboard Admin
-                   {db ? <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-bold shadow-sm">Cloud Tersambung</span> : <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold shadow-sm">Mode Offline Lokal</span>}
+                   {db ? <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-bold shadow-sm">Cloud Tersambung</span> : <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold shadow-sm animate-pulse">Mode Offline (Peringatan!)</span>}
                 </h1>
               </div>
               <div className="flex gap-2">
                 <input type="file" accept=".csv" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
                 <button onClick={() => fileInputRef.current?.click()} className="bg-green-600 text-white px-4 py-2 rounded font-bold"><UploadIcon className="mr-2"/> Import CSV</button>
-                <button onClick={() => { if(window.confirm('HAPUS SEMUA DATA?')) { saveToCloud([]); alert('Data Dihapus!'); } }} className="bg-red-600 text-white px-4 py-2 rounded font-bold"><Trash2Icon className="mr-2"/> Reset</button>
+                <button onClick={() => { if(window.confirm('HAPUS SEMUA DATA?')) { saveToCloud([]); } }} className="bg-red-600 text-white px-4 py-2 rounded font-bold"><Trash2Icon className="mr-2"/> Reset</button>
                 <button onClick={() => setIsLoggedIn(false)} className="bg-gray-800 text-white px-4 py-2 rounded font-bold">Logout</button>
               </div>
             </div>
 
-            {/* Statistik */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#eadde0]">
                 <div className="flex justify-between items-start">
@@ -608,7 +594,6 @@
       );
     }
 
-    // Eksekusi React
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
