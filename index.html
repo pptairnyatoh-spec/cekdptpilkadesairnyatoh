@@ -427,18 +427,21 @@
           )}
 
           {status === 'not-found' && (
-            <div className="bg-white rounded-[18px] shadow-sm border border-red-200 text-center p-8">
-                <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6"><AlertCircle size={40} /></div>
-                <h3 className="text-2xl font-bold text-[#252027] mb-2">DATA TIDAK DITEMUKAN</h3>
-                <p className="text-[#6e6267] mb-6">Maaf, data NIK <span className="font-mono bg-[#faf8f9] px-1 rounded font-bold">{maskNik(nik)}</span> tidak ditemukan.</p>
-                <div className="flex justify-center gap-4">
-                   <button onClick={() => {setStatus('idle'); setNik(''); setIsAgreed(false);}} className="px-6 py-3 bg-white border border-[#eadde0] font-bold rounded-xl">Coba Lagi</button>
-                </div>
-             </div>
-          )}
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full max-w-2xl mx-auto">
+           <div className="bg-white rounded-[18px] shadow-sm border border-red-200 overflow-hidden text-center p-8">
+              <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6"><AlertCircle size={40} /></div>
+              <h3 className="text-2xl font-bold text-[#252027] mb-2">DATA TIDAK DITEMUKAN</h3>
+              <p className="text-[#6e6267] mb-6 max-w-md mx-auto">Maaf, data pemilih dengan NIK <span className="font-mono bg-[#faf8f9] px-1 rounded font-bold">{maskNik(nik)}</span> tidak ditemukan.</p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                 <button onClick={handleReset} className="px-6 py-3 bg-white text-[#252027] font-bold rounded-xl border border-[#eadde0] hover:bg-[#faf8f9] transition-colors">Coba Lagi</button>
+                 <a href="https://wa.me/6283157929283" target="_blank" rel="noopener noreferrer" className="flex justify-center items-center px-6 py-3 bg-[#5b1525] text-white font-bold rounded-xl hover:bg-[#3e0d18] transition-colors">Hubungi Panitia</a>
+              </div>
+           </div>
         </div>
-      );
-    }
+      )}
+    </div>
+  );
+}
     
     function InfoRow({ icon, label, value, isBold = false }) {
       return (
