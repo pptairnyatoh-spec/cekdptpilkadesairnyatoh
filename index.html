@@ -40,28 +40,32 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // ⚠️ GANTI KONFIGURASI INI DENGAN MILIK ANDA NANTI DARI FIREBASE CONSOLE
+    // =========================================================================
+    // ⚠️ KONFIGURASI DATABASE FIREBASE (WAJIB DIISI AGAR DATA TERSIMPAN)
+    // =========================================================================
+    // Hapus tulisan "GANTI_DENGAN_..." dan masukkan kode dari Firebase Console Anda
     const firebaseConfig = {
-      apiKey: "KOSONG",
-      authDomain: "KOSONG",
-      projectId: "KOSONG",
-      storageBucket: "KOSONG",
-      messagingSenderId: "KOSONG",
-      appId: "KOSONG"
+      apiKey: "GANTI_DENGAN_API_KEY_ANDA",
+      authDomain: "GANTI_DENGAN_AUTH_DOMAIN_ANDA",
+      projectId: "GANTI_DENGAN_PROJECT_ID_ANDA",
+      storageBucket: "GANTI_DENGAN_STORAGE_BUCKET_ANDA",
+      messagingSenderId: "GANTI_DENGAN_MESSAGING_SENDER_ID_ANDA",
+      appId: "GANTI_DENGAN_APP_ID_ANDA"
     };
 
     let app, auth, db;
     try {
-      // Jika konfigurasi masih kosong, kita bypass agar UI tetap jalan (Local Mode)
-      if(firebaseConfig.apiKey !== "KOSONG") {
+      // Mencegah error jika konfigurasi belum diisi
+      if(firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("GANTI_DENGAN")) {
          app = firebase.initializeApp(firebaseConfig);
          auth = firebase.auth();
          db = firebase.firestore();
+         console.log("Firebase Berhasil Terhubung!");
       }
     } catch (e) {
       console.error("Firebase init error", e);
     }
-    const appId = 'dpt-air-nyatoh-2026'; // ID Koleksi Dokumen Anda
+    const appId = 'dpt-air-nyatoh-2026'; // ID Dokumen untuk menyimpan data CSV
 
     const maskNik = (nik) => {
       if (!nik || nik.length !== 16) return nik;
@@ -75,7 +79,7 @@
       return `${dateStr} pukul ${timeStr} WIB`;
     };
 
-    // Wrapper Ikon agar kode React lama tidak perlu banyak diubah
+    // Wrapper Ikon FontAwesome
     const Icon = ({ cls, size = 16, className = "" }) => <i className={`${cls} ${className}`} style={{ fontSize: size }}></i>;
     const SearchIcon = (p) => <Icon cls="fa-solid fa-search" {...p} />;
     const CheckCircle2 = (p) => <Icon cls="fa-solid fa-circle-check" {...p} />;
@@ -105,7 +109,7 @@
     const LogoResmi = ({ sizeClass }) => (
       <div className={`${sizeClass} flex-shrink-0 bg-white rounded-md p-1 shadow-sm`}>
         <img 
-          src="ChatGPT20Image20Sep203,202026,2008_05_3220AM.html" 
+          src="ChatGPT Image Sep 3, 2026, 08_05_32 AM_2.png" 
           alt="Logo PPTD Air Nyatoh" 
           className="w-full h-full object-contain"
           onError={(e) => {
@@ -138,22 +142,31 @@
             try {
               const dataStr = docSnap.data().records;
               if (dataStr) setDatabase(JSON.parse(dataStr));
-            } catch (err) {}
+            } catch (err) { console.error("Gagal membaca data", err); }
           }
         });
         return () => unsubscribe();
       }, [user]);
 
+      // FUNGSI INI AKAN MENYIMPAN DATA KE FIREBASE KETIKA ANDA IMPORT CSV
       const saveToCloud = async (newDatabase) => {
-        setDatabase(newDatabase);
-        if (!user || !db) {
-          alert("PERINGATAN: Database Firebase belum dikonfigurasi. Data hanya tersimpan sementara di browser!");
+        setDatabase(newDatabase); // Update tampilan secara lokal dulu
+        
+        if (!db) {
+          alert("PERINGATAN: Konfigurasi Database Firebase belum diisi di kode HTML! Data Anda hanya tersimpan sementara dan akan hilang jika browser ditutup.");
           return;
         }
+        
         try {
-          await db.collection('data_dpt').doc(appId).set({ records: JSON.stringify(newDatabase) });
+          // Menyimpan array data dalam format JSON string ke dokumen Cloud Firestore
+          await db.collection('data_dpt').doc(appId).set({ 
+             records: JSON.stringify(newDatabase),
+             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          console.log("Data sukses disimpan permanen ke Firebase Cloud!");
         } catch (err) {
-          console.error(err);
+          console.error("Error saat menyimpan:", err);
+          alert("Gagal menyimpan ke Cloud: " + err.message);
         }
       };
 
@@ -162,7 +175,7 @@
           {currentView === 'public' ? (
             <PublicPortal switchView={() => setCurrentView('admin')} database={database} isDbLoading={isDbLoading} />
           ) : (
-            <AdminPortal switchView={() => setCurrentView('public')} database={database} saveToCloud={saveToCloud} />
+            <AdminPortal switchView={() => setCurrentView('public')} database={database} saveToCloud={saveToCloud} db={db} />
           )}
         </div>
       );
@@ -242,7 +255,7 @@
                <p className="text-[#6e6267] text-base md:text-lg max-w-2xl mx-auto">Portal resmi pengecekan Data Pemilih Tetap (DPT) Pemilihan Kepala Desa Air Nyatoh Tahun 2026.</p>
             </div>
 
-            {/* DIAGRAM SECTION */}
+            {/* DIAGRAM SECTION DENGAN ANIMASI HOVER */}
             <section ref={chartRef} className="py-8 print:hidden">
               <div className="container mx-auto px-4 max-w-4xl">
                  <div className="bg-white rounded-2xl p-6 md:p-8 shadow-md border-2 border-[#eadde0] relative overflow-hidden">
@@ -442,7 +455,7 @@
       );
     }
 
-    function AdminPortal({ switchView, database, saveToCloud }) {
+    function AdminPortal({ switchView, database, saveToCloud, db }) {
       const [isLoggedIn, setIsLoggedIn] = useState(false);
       const [username, setUsername] = useState('');
       const [password, setPassword] = useState('');
@@ -476,7 +489,7 @@
             const row = rows[i].split(delimiter).map(col => col.trim().replace(/"/g, ''));
             const nikVal = row[idxNik]?.replace(/\D/g, ''); 
             if (nikVal && nikVal.length === 16) {
-               if (!database.some(d => d.nik === nikVal)) {
+               if (!database.some(d => d.nik === nikVal) && !newData.some(d => d.nik === nikVal)) {
                  let jkVal = idxJK !== -1 ? row[idxJK].toUpperCase() : "-";
                  if (jkVal.includes('L') || jkVal.includes('LAKI')) jkVal = 'Laki-laki';
                  if (jkVal.includes('P') || jkVal.includes('PEREMPUAN')) jkVal = 'Perempuan';
@@ -486,7 +499,11 @@
                }
             }
           }
-          if (newData.length > 0) { saveToCloud([...database, ...newData]); alert(`Berhasil import ${newData.length} data!`); }
+          if (newData.length > 0) { 
+            // Fungsi ini sekarang akan langsung menembak ke Cloud Firebase!
+            saveToCloud([...database, ...newData]); 
+            alert(`Berhasil import ${newData.length} data dan disimpan ke sistem!`); 
+          }
           fileInputRef.current.value = "";
         };
         reader.readAsText(file);
@@ -494,11 +511,29 @@
 
       const filteredData = database.filter(item => item.nik.includes(searchTerm) || item.nama.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, 50);
 
+      // Hitung Laki & Perempuan secara akurat
+      const stats = {
+        total: database.length,
+        laki: database.filter(d => {
+           const jk = d.jenis_kelamin?.toUpperCase() || "";
+           return jk === 'LAKI-LAKI' || jk === 'L' || jk.includes('LAKI');
+        }).length,
+        perempuan: database.filter(d => {
+           const jk = d.jenis_kelamin?.toUpperCase() || "";
+           return jk === 'PEREMPUAN' || jk === 'P' || jk.includes('PEREMPUAN');
+        }).length,
+      };
+
       if (!isLoggedIn) {
         return (
           <div className="min-h-screen flex items-center justify-center bg-[#faf8f9]">
-            <form onSubmit={handleLogin} className="bg-white p-8 rounded-xl shadow-md border max-w-sm w-full">
-              <h2 className="text-2xl font-bold mb-6 text-center">Login Admin</h2>
+            <form onSubmit={handleLogin} className="bg-white p-8 rounded-xl shadow-md border max-w-sm w-full relative">
+              {/* INDIKATOR STATUS CLOUD */}
+              <div className="absolute top-4 right-4 flex items-center gap-1.5 text-xs font-bold">
+                 {db ? <span className="text-green-600 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> Cloud Aktif</span> : <span className="text-red-500 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500"></div> Cloud Offline</span>}
+              </div>
+
+              <h2 className="text-2xl font-bold mb-6 text-center mt-2">Login Admin</h2>
               <input type="text" placeholder="Username" value={username} onChange={e=>setUsername(e.target.value)} className="w-full mb-3 p-3 border rounded" />
               <input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full mb-6 p-3 border rounded" />
               <button type="submit" className="w-full bg-[#5b1525] text-white p-3 rounded font-bold">Masuk</button>
@@ -511,19 +546,46 @@
       return (
         <div className="p-6 bg-[#faf8f9] min-h-screen">
           <div className="max-w-6xl mx-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold">Dashboard Admin (Lite Mode)</h1>
+            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                   Dashboard Admin
+                   {db ? <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-bold shadow-sm">Cloud Tersambung</span> : <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold shadow-sm">Mode Offline Lokal</span>}
+                </h1>
+              </div>
               <div className="flex gap-2">
                 <input type="file" accept=".csv" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
                 <button onClick={() => fileInputRef.current?.click()} className="bg-green-600 text-white px-4 py-2 rounded font-bold"><UploadIcon className="mr-2"/> Import CSV</button>
-                <button onClick={() => {saveToCloud([]); alert('Data Dihapus!');}} className="bg-red-600 text-white px-4 py-2 rounded font-bold"><Trash2Icon className="mr-2"/> Reset</button>
+                <button onClick={() => { if(window.confirm('HAPUS SEMUA DATA?')) { saveToCloud([]); alert('Data Dihapus!'); } }} className="bg-red-600 text-white px-4 py-2 rounded font-bold"><Trash2Icon className="mr-2"/> Reset</button>
                 <button onClick={() => setIsLoggedIn(false)} className="bg-gray-800 text-white px-4 py-2 rounded font-bold">Logout</button>
+              </div>
+            </div>
+
+            {/* Statistik */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#eadde0]">
+                <div className="flex justify-between items-start">
+                  <div><p className="text-sm text-[#6e6267] font-bold mb-1">Total DPT</p><p className="text-3xl font-extrabold text-[#5b1525]">{stats.total}</p></div>
+                  <div className="p-3 bg-[#faf8f9] text-[#c99a3b] rounded-xl"><UsersIcon size={24}/></div>
+                </div>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#eadde0]">
+                <div className="flex justify-between items-start">
+                  <div><p className="text-sm text-[#6e6267] font-bold mb-1">Laki-laki</p><p className="text-3xl font-extrabold text-[#252027]">{stats.laki}</p></div>
+                  <div className="p-3 bg-[#faf8f9] text-[#c99a3b] rounded-xl"><UserIcon size={24}/></div>
+                </div>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#eadde0]">
+                <div className="flex justify-between items-start">
+                  <div><p className="text-sm text-[#6e6267] font-bold mb-1">Perempuan</p><p className="text-3xl font-extrabold text-[#252027]">{stats.perempuan}</p></div>
+                  <div className="p-3 bg-[#faf8f9] text-[#c99a3b] rounded-xl"><UserIcon size={24}/></div>
+                </div>
               </div>
             </div>
             
             <div className="bg-white p-6 rounded-xl shadow-sm border">
                <input type="text" placeholder="Cari NIK / Nama..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="w-full p-3 border rounded mb-4"/>
-               <p className="text-sm text-gray-500 mb-2">Menampilkan max 50 data terbaru (Total: {database.length})</p>
+               <p className="text-sm text-gray-500 mb-2">Menampilkan max 50 data terbaru dari total {database.length} pemilih.</p>
                <div className="overflow-x-auto">
                  <table className="w-full text-left border-collapse">
                    <thead><tr className="border-b bg-gray-50">
@@ -532,8 +594,8 @@
                    <tbody>
                      {filteredData.map(row => (
                        <tr key={row.id} className="border-b hover:bg-gray-50">
-                         <td className="p-3">{row.nik}</td><td className="p-3 font-bold">{row.nama}</td><td className="p-3">{row.jenis_kelamin}</td><td className="p-3">{row.tps}</td>
-                         <td className="p-3"><button onClick={() => { if(window.confirm('Hapus?')) saveToCloud(database.filter(d => d.id !== row.id)) }} className="text-red-500"><Trash2Icon/></button></td>
+                         <td className="p-3 font-mono">{row.nik}</td><td className="p-3 font-bold">{row.nama}</td><td className="p-3">{row.jenis_kelamin === 'Laki-laki' || row.jenis_kelamin === 'L' ? 'L' : 'P'}</td><td className="p-3">{row.tps}</td>
+                         <td className="p-3"><button onClick={() => { if(window.confirm('Hapus?')) saveToCloud(database.filter(d => d.id !== row.id)) }} className="text-red-500"><Trash2Icon size={16}/></button></td>
                        </tr>
                      ))}
                    </tbody>
