@@ -103,6 +103,9 @@
     const Trash2Icon = (p) => <Icon cls="fa-solid fa-trash" {...p} />;
     const EditIcon = (p) => <Icon cls="fa-solid fa-pen-to-square" {...p} />;
     const DownloadIcon = (p) => <Icon cls="fa-solid fa-download" {...p} />;
+    const PlusIcon = (p) => <Icon cls="fa-solid fa-plus" {...p} />;
+    const ChevronLeftIcon = (p) => <Icon cls="fa-solid fa-chevron-left" {...p} />;
+    const ChevronRightIcon = (p) => <Icon cls="fa-solid fa-chevron-right" {...p} />;
 
     const LogoResmi = ({ sizeClass }) => (
       <div className={`${sizeClass} flex-shrink-0 bg-white rounded-md p-1 shadow-sm`}>
@@ -481,13 +484,53 @@
       const [isLoggedIn, setIsLoggedIn] = useState(false);
       const [username, setUsername] = useState('');
       const [password, setPassword] = useState('');
+      
+      // State untuk Pencarian dan Pagination
       const [searchTerm, setSearchTerm] = useState('');
+      const [currentPage, setCurrentPage] = useState(1);
+      const ITEMS_PER_PAGE = 50;
+
+      // State untuk Tambah Data Manual
+      const [showAddForm, setShowAddForm] = useState(false);
+      const [formData, setFormData] = useState({ nik: '', nama: '', jenis_kelamin: 'Laki-laki', tps: 'TPS 01' });
+
       const fileInputRef = useRef(null);
 
       const handleLogin = (e) => {
         e.preventDefault();
         if (username === 'admin' && password === '31072026') setIsLoggedIn(true);
         else alert("Username atau password salah!");
+      };
+
+      // Reset halaman ke 1 setiap kali melakukan pencarian (Realtime Filter)
+      useEffect(() => {
+        setCurrentPage(1);
+      }, [searchTerm]);
+
+      // Logika Tambah Data Manual
+      const handleAddSubmit = (e) => {
+        e.preventDefault();
+        if (formData.nik.length !== 16) return alert("Nomor NIK harus berjumlah 16 digit!");
+        if (database.some(d => d.nik === formData.nik)) return alert("NIK tersebut sudah terdaftar di DPT!");
+
+        const tpsFormat = formData.tps.toUpperCase().includes('TPS') ? formData.tps.toUpperCase() : `TPS ${formData.tps.padStart(2, '0')}`;
+        
+        const newData = {
+          id: Date.now(),
+          nik: formData.nik,
+          nama: formData.nama.toUpperCase(),
+          jenis_kelamin: formData.jenis_kelamin,
+          dusun: "Air Nyatoh",
+          tps: tpsFormat,
+          nomor_dpt: `DPT-2026-${String(database.length + 1).padStart(4, '0')}`,
+          status: "TERDAFTAR"
+        };
+
+        // Simpan data (ditambahkan ke urutan paling atas agar mudah terlihat)
+        saveToCloud([newData, ...database]);
+        setShowAddForm(false); // Tutup Modal
+        setFormData({ nik: '', nama: '', jenis_kelamin: 'Laki-laki', tps: 'TPS 01' }); // Reset Form
+        alert("Data pemilih berhasil ditambahkan!");
       };
 
       const handleFileUpload = (e) => {
@@ -529,7 +572,14 @@
         reader.readAsText(file);
       };
 
-      const filteredData = database.filter(item => item.nik.includes(searchTerm) || item.nama.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, 50);
+      // Filter data secara realtime
+      const filteredData = database.filter(item => 
+        item.nik.includes(searchTerm) || item.nama.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      // Logika Pagination (Hitung total halaman dan ambil data per halaman)
+      const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+      const paginatedData = filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
       const stats = {
         total: database.length,
@@ -570,11 +620,14 @@
                    {db ? <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-bold shadow-sm">Cloud Tersambung</span> : <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold shadow-sm animate-pulse">Mode Offline (Peringatan!)</span>}
                 </h1>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                {/* Tombol Tambah Data Manual */}
+                <button onClick={() => setShowAddForm(true)} className="bg-[#c99a3b] text-[#3e0d18] px-4 py-2 rounded font-bold hover:bg-[#b08530] transition-colors"><PlusIcon className="mr-2"/> Tambah Data</button>
+                
                 <input type="file" accept=".csv" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-                <button onClick={() => fileInputRef.current?.click()} className="bg-green-600 text-white px-4 py-2 rounded font-bold"><UploadIcon className="mr-2"/> Import CSV</button>
-                <button onClick={() => { if(window.confirm('HAPUS SEMUA DATA?')) { saveToCloud([]); } }} className="bg-red-600 text-white px-4 py-2 rounded font-bold"><Trash2Icon className="mr-2"/> Reset</button>
-                <button onClick={() => setIsLoggedIn(false)} className="bg-gray-800 text-white px-4 py-2 rounded font-bold">Logout</button>
+                <button onClick={() => fileInputRef.current?.click()} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 transition-colors"><UploadIcon className="mr-2"/> Import CSV</button>
+                <button onClick={() => { if(window.confirm('HAPUS SEMUA DATA?')) { saveToCloud([]); } }} className="bg-red-600 text-white px-4 py-2 rounded font-bold hover:bg-red-700 transition-colors"><Trash2Icon className="mr-2"/> Reset</button>
+                <button onClick={() => setIsLoggedIn(false)} className="bg-gray-800 text-white px-4 py-2 rounded font-bold hover:bg-black transition-colors">Logout</button>
               </div>
             </div>
 
@@ -599,32 +652,97 @@
               </div>
             </div>
             
+            {/* Tabel Data dengan Fitur Search dan Pagination */}
             <div className="bg-white p-6 rounded-xl shadow-sm border">
-               <input type="text" placeholder="Cari NIK / Nama..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="w-full p-3 border rounded mb-4"/>
-               <p className="text-sm text-gray-500 mb-2">Menampilkan max 50 data terbaru dari total {database.length} pemilih.</p>
-               <div className="overflow-x-auto">
+               <div className="flex items-center gap-2 mb-4">
+                 <SearchIcon className="text-gray-400" />
+                 <input type="text" placeholder="Cari NIK atau Nama Pemilih..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-[#c99a3b]"/>
+               </div>
+               
+               <div className="overflow-x-auto min-h-[400px]">
                  <table className="w-full text-left border-collapse">
                    <thead><tr className="border-b bg-gray-50">
-                     <th className="p-3">NIK</th><th className="p-3">Nama</th><th className="p-3">L/P</th><th className="p-3">TPS</th><th className="p-3">Aksi</th>
+                     <th className="p-3">No</th><th className="p-3">NIK</th><th className="p-3">Nama</th><th className="p-3">L/P</th><th className="p-3">TPS</th><th className="p-3">Aksi</th>
                    </tr></thead>
                    <tbody>
-                     {filteredData.map(row => (
-                       <tr key={row.id} className="border-b hover:bg-gray-50">
-                         <td className="p-3 font-mono">{row.nik}</td><td className="p-3 font-bold">{row.nama}</td><td className="p-3">{row.jenis_kelamin === 'Laki-laki' || row.jenis_kelamin === 'L' ? 'L' : 'P'}</td><td className="p-3">{row.tps}</td>
-                         <td className="p-3"><button onClick={() => { if(window.confirm('Hapus?')) saveToCloud(database.filter(d => d.id !== row.id)) }} className="text-red-500"><Trash2Icon size={16}/></button></td>
-                       </tr>
-                     ))}
+                     {paginatedData.length > 0 ? (
+                       paginatedData.map((row, index) => (
+                         <tr key={row.id} className="border-b hover:bg-gray-50">
+                           <td className="p-3 text-sm text-gray-500">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
+                           <td className="p-3 font-mono">{row.nik}</td>
+                           <td className="p-3 font-bold">{row.nama}</td>
+                           <td className="p-3">{row.jenis_kelamin === 'Laki-laki' || row.jenis_kelamin === 'L' ? 'L' : 'P'}</td>
+                           <td className="p-3">{row.tps}</td>
+                           <td className="p-3"><button onClick={() => { if(window.confirm('Hapus data pemilih ini?')) saveToCloud(database.filter(d => d.id !== row.id)) }} className="text-red-500 hover:text-red-700 p-2"><Trash2Icon size={16}/></button></td>
+                         </tr>
+                       ))
+                     ) : (
+                       <tr><td colSpan="6" className="p-8 text-center text-gray-500">Tidak ada data ditemukan.</td></tr>
+                     )}
                    </tbody>
                  </table>
                </div>
+
+               {/* Kontrol Navigasi Pagination */}
+               <div className="flex flex-col md:flex-row justify-between items-center mt-4 pt-4 border-t gap-4">
+                 <span className="text-sm text-gray-500">
+                    Menampilkan <b>{paginatedData.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}</b> - <b>{Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)}</b> dari total <b>{filteredData.length}</b> data
+                 </span>
+                 <div className="flex gap-2">
+                    <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 border rounded font-bold disabled:opacity-30 hover:bg-gray-50 transition-colors flex items-center gap-1">
+                      <ChevronLeftIcon size={12}/> Prev
+                    </button>
+                    <div className="px-4 py-2 bg-gray-100 rounded font-bold text-gray-600">Hal {currentPage} / {totalPages || 1}</div>
+                    <button disabled={currentPage >= totalPages || totalPages === 0} onClick={() => setCurrentPage(p => p + 1)} className="px-4 py-2 border rounded font-bold disabled:opacity-30 hover:bg-gray-50 transition-colors flex items-center gap-1">
+                      Next <ChevronRightIcon size={12}/>
+                    </button>
+                 </div>
+               </div>
             </div>
           </div>
+
+          {/* Modal Overlay untuk Tambah Data */}
+          {showAddForm && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                <div className="flex justify-between items-center mb-6">
+                   <h3 className="text-xl font-bold text-[#252027]">Tambah Data Pemilih</h3>
+                   <button onClick={() => setShowAddForm(false)} className="text-gray-400 hover:text-red-500"><XIcon size={24} /></button>
+                </div>
+                
+                <form onSubmit={handleAddSubmit}>
+                  <div className="space-y-4">
+                    <div>
+                       <label className="block text-sm font-bold text-gray-700 mb-1">Nomor Induk Kependudukan (NIK)</label>
+                       <input required type="text" maxLength={16} value={formData.nik} onChange={e=>setFormData({...formData, nik: e.target.value.replace(/\D/g,'')})} className="w-full border-2 p-3 rounded-xl focus:outline-none focus:border-[#c99a3b]" placeholder="Masukkan 16 Digit NIK" />
+                    </div>
+                    <div>
+                       <label className="block text-sm font-bold text-gray-700 mb-1">Nama Lengkap</label>
+                       <input required type="text" value={formData.nama} onChange={e=>setFormData({...formData, nama: e.target.value})} className="w-full border-2 p-3 rounded-xl focus:outline-none focus:border-[#c99a3b]" placeholder="Nama sesuai KTP" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                       <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-1">Jenis Kelamin</label>
+                          <select value={formData.jenis_kelamin} onChange={e=>setFormData({...formData, jenis_kelamin: e.target.value})} className="w-full border-2 p-3 rounded-xl bg-white focus:outline-none focus:border-[#c99a3b]">
+                            <option value="Laki-laki">Laki-laki</option>
+                            <option value="Perempuan">Perempuan</option>
+                          </select>
+                       </div>
+                       <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-1">TPS</label>
+                          <input required type="text" value={formData.tps} onChange={e=>setFormData({...formData, tps: e.target.value})} className="w-full border-2 p-3 rounded-xl focus:outline-none focus:border-[#c99a3b]" placeholder="Contoh: 01" />
+                       </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-3 mt-8">
+                    <button type="button" onClick={()=>setShowAddForm(false)} className="px-5 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition-colors">Batal</button>
+                    <button type="submit" className="px-5 py-3 bg-[#5b1525] text-white rounded-xl font-bold hover:bg-[#3e0d18] transition-colors shadow-md">Simpan Data</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
         </div>
       );
     }
-
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
-</body>
-</html>
