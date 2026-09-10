@@ -332,21 +332,46 @@
 
           <footer className="bg-[#3e0d18] border-t-4 border-[#c99a3b] text-white py-12 print:hidden">
             <div className="container mx-auto px-4 max-w-5xl text-center">
-              <div className="flex justify-center mb-6"><LogoResmi sizeClass="h-16 md:h-20 w-auto" /></div>
-              <h3 className="text-[#c99a3b] font-bold text-lg mb-1 tracking-wide">PANITIA PEMILIHAN TINGKAT DESA</h3>
-              <p className="text-[#eadde0] text-sm mb-8">Pemilihan Kepala Desa Air Nyatoh Tahun 2026</p>
+              
+              <div className="flex justify-center mb-6">
+                <LogoResmi sizeClass="h-16 md:h-20 w-auto" />
+              </div>
+              
+              <h3 className="text-[#c99a3b] font-bold text-lg mb-1 tracking-wide">
+                PANITIA PEMILIHAN TINGKAT DESA
+              </h3>
+              
+              <p className="text-[#eadde0] text-sm mb-8">
+                Pemilihan Kepala Desa Air Nyatoh Tahun 2026
+              </p>
+              
+              {/* Bagian bawah footer (Link, Copyright, Button) */}
               <div className="pt-6 border-t border-[#5b1525] flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-[#eadde0]">
-                <a href="https://www.instagram.com/pptairnyatoh/" target="_blank" className="flex items-center gap-2 text-sm text-[#eadde0] hover:text-[#c99a3b] transition-colors bg-[#252027]/20 px-4 py-2 rounded-full"><InstagramIcon size={18} /> @pptairnyatoh</a>
-              </div>
+                <a 
+                  href="https://www.instagram.com/pptairnyatoh/" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="flex items-center gap-2 text-sm text-[#eadde0] hover:text-[#c99a3b] transition-colors bg-[#252027]/20 px-4 py-2 rounded-full"
+                >
+                  <InstagramIcon size={18} /> @pptairnyatoh
+                </a>
+                
                 <p>© 2026 Panitia Pemilihan Tingkat Desa Air Nyatoh.</p>
-                <button onClick={switchView} className="flex items-center gap-1 hover:text-[#c99a3b] opacity-60 hover:opacity-100 transition-colors"><ShieldCheck size={14} /> Login Admin</button>
+                
+                <button 
+                  onClick={switchView} 
+                  className="flex items-center gap-1 hover:text-[#c99a3b] opacity-60 hover:opacity-100 transition-colors"
+                >
+                  <ShieldCheck size={14} /> Login Admin
+                </button>
               </div>
+              
             </div>
           </footer>
         </div>
       );
     }
-
+    
     function SearchEngine({ database, isDbLoading }) {
       const [nik, setNik] = useState('');
       const [showNik, setShowNik] = useState(false);
