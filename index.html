@@ -40,17 +40,17 @@
     const { useState, useEffect, useRef } = React;
 
     // =========================================================================
-    // ⚠️ KONFIGURASI DATABASE FIREBASE (WAJIB DIISI MILIK ANDA SENDIRI)
+    // ⚠️ KONFIGURASI DATABASE FIREBASE
     // =========================================================================
     const firebaseConfig = {
       apiKey: "AIzaSyBDcAGi02ZzQ3h9OuBiv6lQ5RSrS0YjgIM",
-  authDomain: "cekdptonlinepilkades.firebaseapp.com",
-  projectId: "cekdptonlinepilkades",
-  storageBucket: "cekdptonlinepilkades.firebasestorage.app",
-  messagingSenderId: "638819297097",
-  appId: "1:638819297097:web:eb9f04a3c172ed09605c98",
-  measurementId: "G-C5C8KCJ7GR"
-};
+      authDomain: "cekdptonlinepilkades.firebaseapp.com",
+      projectId: "cekdptonlinepilkades",
+      storageBucket: "cekdptonlinepilkades.firebasestorage.app",
+      messagingSenderId: "638819297097",
+      appId: "1:638819297097:web:eb9f04a3c172ed09605c98",
+      measurementId: "G-C5C8KCJ7GR"
+    };
 
     let app, db;
     try {
@@ -63,7 +63,7 @@
       console.error("Firebase init error", e);
     }
     
-    const appId = 'dpt-air-nyatoh-2026'; // ID Koleksi Dokumen
+    const appId = 'dpt-air-nyatoh-2026';
 
     const maskNik = (nik) => {
       if (!nik || nik.length !== 16) return nik;
@@ -77,7 +77,7 @@
       return `${dateStr} pukul ${timeStr} WIB`;
     };
 
-    // Wrapper Ikon FontAwesome
+    // Wrapper Ikon FontAwesome (Termasuk Ikon Baru)
     const Icon = ({ cls, size = 16, className = "" }) => <i className={`${cls} ${className}`} style={{ fontSize: size }}></i>;
     const SearchIcon = (p) => <Icon cls="fa-solid fa-search" {...p} />;
     const CheckCircle2 = (p) => <Icon cls="fa-solid fa-circle-check" {...p} />;
@@ -127,7 +127,6 @@
       const [database, setDatabase] = useState([]);
       const [isDbLoading, setIsDbLoading] = useState(true);
 
-      // KONEKSI DAN TARIK DATA DARI FIREBASE SECARA REALTIME
       useEffect(() => {
         if (!db) {
            setIsDbLoading(false);
@@ -146,19 +145,18 @@
           setIsDbLoading(false);
         }, (error) => {
            console.error("Error mengambil data:", error);
-           alert("GAGAL MENGHUBUNGI DATABASE!\n\nPastikan Firebase Firestore Anda sudah dibuat (Create Database) dan Aturan (Rules) sudah diatur ke 'true'.");
+           alert("GAGAL MENGHUBUNGI DATABASE!\n\nPastikan Firebase Firestore Anda sudah dibuat dan Aturan (Rules) sudah 'true'.");
            setIsDbLoading(false);
         });
 
         return () => unsubscribe();
       }, []);
 
-      // FUNGSI UNTUK MENGIRIM DAN MENYIMPAN DATA KE GOOGLE CLOUD
       const saveToCloud = async (newDatabase) => {
-        setDatabase(newDatabase); // Update UI Lokal
+        setDatabase(newDatabase);
         
         if (!db) {
-          alert("PERINGATAN: Anda belum memasukkan Kode Firebase di script HTML! Data hanya tersimpan di memori sementara dan akan HILANG jika halaman di-refresh.");
+          alert("PERINGATAN: Anda belum memasukkan Kode Firebase! Data hanya tersimpan sementara.");
           return;
         }
         
@@ -167,10 +165,10 @@
              records: JSON.stringify(newDatabase),
              lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
           });
-          alert("SUKSES: Data berhasil dikirim dan disimpan permanen di Cloud Firebase!");
+          alert("SUKSES: Data berhasil dikirim dan disimpan permanen!");
         } catch (err) {
           console.error("Error menyimpan:", err);
-          alert(`GAGAL MENYIMPAN KE CLOUD!\n\nPesan Error: ${err.message}\n\nSolusi: Masuk ke Firebase Console -> Firestore Database -> Buka tab 'Rules' -> Ubah menjadi:\nallow read, write: if true;`);
+          alert(`GAGAL MENYIMPAN KE CLOUD!\n\nPesan Error: ${err.message}`);
         }
       };
 
@@ -190,7 +188,6 @@
       const cekDptRef = useRef(null);
       const chartRef = useRef(null);
       const infoRef = useRef(null);
-      const tahapanRef = useRef(null);
 
       const scrollToSection = (ref) => {
         setIsMobileMenuOpen(false);
@@ -234,7 +231,7 @@
                   <button onClick={() => window.scrollTo(0, 0)} className="text-sm font-medium text-[#eadde0] hover:text-[#c99a3b] transition-colors">Beranda</button>
                   <button onClick={() => scrollToSection(chartRef)} className="text-sm font-medium text-[#eadde0] hover:text-[#c99a3b] transition-colors">Statistik</button>
                   <button onClick={() => scrollToSection(infoRef)} className="text-sm font-medium text-[#eadde0] hover:text-[#c99a3b] transition-colors">Informasi</button>
-                  <a href="https://wa.me/6283157929283" target="_blank" className="text-sm font-medium text-[#eadde0] hover:text-[#c99a3b] transition-colors">Bantuan</a>
+                  <a href="https://wa.me/6283157929283" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-[#eadde0] hover:text-[#c99a3b] transition-colors">Bantuan</a>
                   <button onClick={() => scrollToSection(cekDptRef)} className="bg-[#c99a3b] text-[#3e0d18] px-5 py-2 rounded-xl text-sm font-bold hover:bg-white transition-all shadow-sm border-2 border-[#c99a3b]">CEK DPT</button>
                 </nav>
                 <button className="md:hidden p-2 text-[#c99a3b]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
@@ -247,7 +244,7 @@
                  <button onClick={() => { window.scrollTo(0,0); setIsMobileMenuOpen(false); }} className="block w-full text-left px-3 py-3 text-base font-medium text-[#eadde0] hover:text-[#c99a3b]">Beranda</button>
                  <button onClick={() => scrollToSection(chartRef)} className="block w-full text-left px-3 py-3 text-base font-medium text-[#eadde0] hover:text-[#c99a3b]">Statistik</button>
                  <button onClick={() => scrollToSection(infoRef)} className="block w-full text-left px-3 py-3 text-base font-medium text-[#eadde0] hover:text-[#c99a3b]">Informasi</button>
-                 <a href="https://wa.me/6283157929283" target="_blank" className="block w-full text-left px-3 py-3 text-base font-medium text-[#eadde0] hover:text-[#c99a3b]">Bantuan</a>
+                 <a href="https://wa.me/6283157929283" target="_blank" rel="noopener noreferrer" className="block w-full text-left px-3 py-3 text-base font-medium text-[#eadde0] hover:text-[#c99a3b]">Bantuan</a>
                  <button onClick={() => scrollToSection(cekDptRef)} className="block w-full text-center mt-2 bg-[#c99a3b] text-[#3e0d18] px-3 py-3 rounded-xl text-base font-bold">CEK DATA PEMILIH</button>
               </div>
             )}
@@ -336,40 +333,24 @@
 
           <footer className="bg-[#3e0d18] border-t-4 border-[#c99a3b] text-white py-12 print:hidden">
             <div className="container mx-auto px-4 max-w-5xl text-center">
-              
               <div className="flex justify-center mb-6">
                 <LogoResmi sizeClass="h-16 md:h-20 w-auto" />
               </div>
-              
               <h3 className="text-[#c99a3b] font-bold text-lg mb-1 tracking-wide">
                 PANITIA PEMILIHAN TINGKAT DESA
               </h3>
-              
               <p className="text-[#eadde0] text-sm mb-8">
                 Pemilihan Kepala Desa Air Nyatoh Tahun 2026
               </p>
-              
-              {/* Bagian bawah footer (Link, Copyright, Button) */}
               <div className="pt-6 border-t border-[#5b1525] flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-[#eadde0]">
-                <a 
-                  href="https://www.instagram.com/pptairnyatoh/" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="flex items-center gap-2 text-sm text-[#eadde0] hover:text-[#c99a3b] transition-colors bg-[#252027]/20 px-4 py-2 rounded-full"
-                >
+                <a href="https://www.instagram.com/pptairnyatoh/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-[#eadde0] hover:text-[#c99a3b] transition-colors bg-[#252027]/20 px-4 py-2 rounded-full">
                   <InstagramIcon size={18} /> @pptairnyatoh
                 </a>
-                
                 <p>© 2026 Panitia Pemilihan Tingkat Desa Air Nyatoh.</p>
-                
-                <button 
-                  onClick={switchView} 
-                  className="flex items-center gap-1 hover:text-[#c99a3b] opacity-60 hover:opacity-100 transition-colors"
-                >
+                <button onClick={switchView} className="flex items-center gap-1 hover:text-[#c99a3b] opacity-60 hover:opacity-100 transition-colors">
                   <ShieldCheck size={14} /> Login Admin
                 </button>
               </div>
-              
             </div>
           </footer>
         </div>
@@ -485,14 +466,12 @@
       const [username, setUsername] = useState('');
       const [password, setPassword] = useState('');
       
-      // State untuk Pencarian dan Pagination
       const [searchTerm, setSearchTerm] = useState('');
       const [currentPage, setCurrentPage] = useState(1);
       const ITEMS_PER_PAGE = 50;
 
-      // State untuk Tambah Data Manual
       const [showAddForm, setShowAddForm] = useState(false);
-      const [formData, setFormData] = useState({ nik: '', nama: '', jenis_kelamin: 'Laki-laki', tps: 'TPS 01' });
+      const [formData, setFormData] = useState({ nik: '', nama: '', jenis_kelamin: 'Laki-laki', tps: '01' });
 
       const fileInputRef = useRef(null);
 
@@ -502,12 +481,10 @@
         else alert("Username atau password salah!");
       };
 
-      // Reset halaman ke 1 setiap kali melakukan pencarian (Realtime Filter)
       useEffect(() => {
         setCurrentPage(1);
       }, [searchTerm]);
 
-      // Logika Tambah Data Manual
       const handleAddSubmit = (e) => {
         e.preventDefault();
         if (formData.nik.length !== 16) return alert("Nomor NIK harus berjumlah 16 digit!");
@@ -526,10 +503,9 @@
           status: "TERDAFTAR"
         };
 
-        // Simpan data (ditambahkan ke urutan paling atas agar mudah terlihat)
         saveToCloud([newData, ...database]);
-        setShowAddForm(false); // Tutup Modal
-        setFormData({ nik: '', nama: '', jenis_kelamin: 'Laki-laki', tps: 'TPS 01' }); // Reset Form
+        setShowAddForm(false);
+        setFormData({ nik: '', nama: '', jenis_kelamin: 'Laki-laki', tps: '01' });
         alert("Data pemilih berhasil ditambahkan!");
       };
 
@@ -572,12 +548,10 @@
         reader.readAsText(file);
       };
 
-      // Filter data secara realtime
       const filteredData = database.filter(item => 
         item.nik.includes(searchTerm) || item.nama.toLowerCase().includes(searchTerm.toLowerCase())
       );
 
-      // Logika Pagination (Hitung total halaman dan ambil data per halaman)
       const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
       const paginatedData = filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
@@ -617,13 +591,11 @@
               <div>
                 <h1 className="text-2xl font-bold flex items-center gap-2">
                    Dashboard Admin
-                   {db ? <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-bold shadow-sm">Cloud Tersambung</span> : <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold shadow-sm animate-pulse">Mode Offline (Peringatan!)</span>}
+                   {db ? <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-bold shadow-sm">Cloud Tersambung</span> : <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold shadow-sm animate-pulse">Mode Offline</span>}
                 </h1>
               </div>
               <div className="flex flex-wrap gap-2">
-                {/* Tombol Tambah Data Manual */}
                 <button onClick={() => setShowAddForm(true)} className="bg-[#c99a3b] text-[#3e0d18] px-4 py-2 rounded font-bold hover:bg-[#b08530] transition-colors"><PlusIcon className="mr-2"/> Tambah Data</button>
-                
                 <input type="file" accept=".csv" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
                 <button onClick={() => fileInputRef.current?.click()} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 transition-colors"><UploadIcon className="mr-2"/> Import CSV</button>
                 <button onClick={() => { if(window.confirm('HAPUS SEMUA DATA?')) { saveToCloud([]); } }} className="bg-red-600 text-white px-4 py-2 rounded font-bold hover:bg-red-700 transition-colors"><Trash2Icon className="mr-2"/> Reset</button>
@@ -652,7 +624,6 @@
               </div>
             </div>
             
-            {/* Tabel Data dengan Fitur Search dan Pagination */}
             <div className="bg-white p-6 rounded-xl shadow-sm border">
                <div className="flex items-center gap-2 mb-4">
                  <SearchIcon className="text-gray-400" />
@@ -683,7 +654,6 @@
                  </table>
                </div>
 
-               {/* Kontrol Navigasi Pagination */}
                <div className="flex flex-col md:flex-row justify-between items-center mt-4 pt-4 border-t gap-4">
                  <span className="text-sm text-gray-500">
                     Menampilkan <b>{paginatedData.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}</b> - <b>{Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)}</b> dari total <b>{filteredData.length}</b> data
@@ -701,7 +671,6 @@
             </div>
           </div>
 
-          {/* Modal Overlay untuk Tambah Data */}
           {showAddForm && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -742,7 +711,12 @@
               </div>
             </div>
           )}
-
         </div>
       );
     }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
